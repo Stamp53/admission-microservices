@@ -1,0 +1,240 @@
+package com.example.admission.service;
+
+import com.example.admission.dto.AdminStudentRegistrationDto;
+import com.example.admission.dto.ApprovalDto;
+import com.example.admission.dto.RejectionDto;
+import com.example.admission.dto.StudentRegistrationDto;
+import com.example.admission.model.AdmissionApplication;
+import com.example.admission.model.ApplicationStatus;
+import com.example.admission.model.Role;
+import com.example.admission.model.User;
+import com.example.admission.repository.AdmissionApplicationRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.time.Year;
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class ApplicationService {
+
+    private final AdmissionApplicationRepository applicationRepository;
+    private final UserService userService;
+
+    public ApplicationService(AdmissionApplicationRepository applicationRepository, UserService userService) {
+        this.applicationRepository = applicationRepository;
+        this.userService = userService;
+    }
+
+    private synchronized String generateNextApplicationNumber() {
+        int currentYear = Year.now().getValue();
+        long totalCount = applicationRepository.count();
+        long nextSeq = 1001 + totalCount;
+        String appNum = "APP-" + currentYear + "-" + nextSeq;
+        while (applicationRepository.findByApplicationNumber(appNum).isPresent()) {
+            nextSeq++;
+            appNum = "APP-" + currentYear + "-" + nextSeq;
+        }
+        return appNum;
+    }
+
+    private synchronized String generateNextPermanentRollNumber() {
+        int currentYear = Year.now().getValue();
+        long approvedCount = applicationRepository.countByStatus(ApplicationStatus.APPROVED);
+        long nextSeq = 1 + approvedCount;
+        String rollNum = String.format("ADM-%d-%03d", currentYear, nextSeq);
+        while (applicationRepository.findByPermanentRollNumber(rollNum).isPresent()) {
+            nextSeq++;
+            rollNum = String.format("ADM-%d-%03d", currentYear, nextSeq);
+        }
+        return rollNum;
+    }
+
+    @Transactional
+    public AdmissionApplication registerStudentApplication(StudentRegistrationDto dto) {
+        int currentYear = Year.now().getValue();
+
+        if (applicationRepository.existsByEmailAndAppliedClassAndAcademicYear(dto.getEmail(), dto.getAppliedClass(), currentYear)) {
+            throw new IllegalArgumentException("An application for " + dto.getAppliedClass() + " in academic year " + currentYear + " with email " + dto.getEmail() + " already exists.");
+        }
+
+        User user = userService.registerUser(
+                dto.getUsername(),
+                dto.getPassword(),
+                dto.getFullName(),
+                Role.ROLE_STUDENT
+        );
+
+        AdmissionApplication app = new AdmissionApplication();
+        app.setApplicationNumber(generateNextApplicationNumber());
+        app.setAcademicYear(currentYear);
+        app.setStudentName(dto.getFullName());
+        app.setEmail(dto.getEmail());
+        app.setPhone(dto.getPhone());
+        app.setDateOfBirth(dto.getDateOfBirth());
+        app.setGender(dto.getGender());
+        app.setAddress(dto.getAddress());
+        app.setAppliedClass(dto.getAppliedClass());
+        app.setPreviousSchool(dto.getPreviousSchool());
+        app.setMarksPercentage(dto.getMarksPercentage());
+        app.setStatus(ApplicationStatus.PENDING);
+        app.setRegisteredBy("STUDENT");
+        app.setUser(user);
+
+        return applicationRepository.save(app);
+    }
+
+    @Transactional
+    public AdmissionApplication adminRegisterStudent(AdminStudentRegistrationDto dto) {
+        User user = null;
+        if (dto.isCreateUserAccount() && dto.getUsername() != null && !dto.getUsername().trim().isEmpty()) {
+            String password = (dto.getPassword() != null && !dto.getPassword().trim().isEmpty()) 
+                    ? dto.getPassword() 
+                    : "student123";
+            user = userService.registerUser(
+                    dto.getUsername(),
+                    password,
+                    dto.getFullName(),
+                    Role.ROLE_STUDENT
+            );
+        }
+
+        AdmissionApplication app = new AdmissionApplication();
+        app.setApplicationNumber(generateNextApplicationNumber());
+        app.setAcademicYear(Year.now().getValue());
+        app.setStudentName(dto.getFullName());
+        app.setEmail(dto.getEmail());
+        app.setPhone(dto.getPhone());
+        app.setDateOfBirth(dto.getDateOfBirth());
+        app.setGender(dto.getGender());
+        app.setAddress(dto.getAddress());
+        app.setAppliedClass(dto.getAppliedClass());
+        app.setPreviousSchool(dto.getPreviousSchool());
+        app.setMarksPercentage(dto.getMarksPercentage());
+        app.setRegisteredBy("ADMIN");
+        app.setUser(user);
+
+        if ("APPROVED".equalsIgnoreCase(dto.getInitialStatus())) {
+            app.setStatus(ApplicationStatus.APPROVED);
+            app.setAssignedClass(dto.getAssignedClass() != null && !dto.getAssignedClass().isEmpty() ? dto.getAssignedClass() : dto.getAppliedClass());
+            app.setAssignedSection(dto.getAssignedSection() != null && !dto.getAssignedSection().isEmpty() ? dto.getAssignedSection() : "A");
+            app.setPermanentRollNumber(generateNextPermanentRollNumber());
+            app.setRemarks(dto.getRemarks() != null ? dto.getRemarks() : "Directly enrolled by Administrator.");
+            app.setDecisionDate(LocalDateTime.now());
+        } else {
+            app.setStatus(ApplicationStatus.PENDING);
+            app.setRemarks(dto.getRemarks());
+        }
+
+        return applicationRepository.save(app);
+    }
+
+    @Transactional
+    public AdmissionApplication approveApplication(Long id, ApprovalDto dto) {
+        AdmissionApplication app = applicationRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Application not found with ID: " + id));
+
+        app.setStatus(ApplicationStatus.APPROVED);
+        app.setAssignedClass(dto.getAssignedClass());
+        app.setAssignedSection(dto.getAssignedSection());
+        if (app.getPermanentRollNumber() == null) {
+            app.setPermanentRollNumber(generateNextPermanentRollNumber());
+        }
+        app.setRemarks(dto.getRemarks());
+        app.setDecisionDate(LocalDateTime.now());
+
+        return applicationRepository.save(app);
+    }
+
+    @Transactional
+    public AdmissionApplication rejectApplication(Long id, RejectionDto dto) {
+        AdmissionApplication app = applicationRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Application not found with ID: " + id));
+
+        app.setStatus(ApplicationStatus.REJECTED);
+        app.setRemarks(dto.getRemarks());
+        app.setDecisionDate(LocalDateTime.now());
+
+        return applicationRepository.save(app);
+    }
+
+    public Optional<AdmissionApplication> getApplicationForUser(User user) {
+        if (user == null) {
+            return Optional.empty();
+        }
+        if (user.getId() != null) {
+            Optional<AdmissionApplication> byId = applicationRepository.findByUserId(user.getId());
+            if (byId.isPresent()) {
+                return byId;
+            }
+        }
+        if (user.getUsername() != null) {
+            Optional<AdmissionApplication> byName = applicationRepository.findByUserUsername(user.getUsername());
+            if (byName.isPresent()) {
+                return byName;
+            }
+        }
+        return Optional.empty();
+    }
+
+    public List<AdmissionApplication> getAllApplicationsForUser(User user) {
+        if (user == null) {
+            return List.of();
+        }
+        if (user.getId() != null) {
+            return applicationRepository.findByUserIdOrderByAppliedDateDesc(user.getId());
+        }
+        if (user.getUsername() != null) {
+            return applicationRepository.findByUserUsernameOrderByAppliedDateDesc(user.getUsername());
+        }
+        return List.of();
+    }
+
+    public Optional<AdmissionApplication> findById(Long id) {
+        return applicationRepository.findById(id);
+    }
+
+    public Optional<AdmissionApplication> findByApplicationNumber(String applicationNumber) {
+        return applicationRepository.findByApplicationNumber(applicationNumber);
+    }
+
+    public List<AdmissionApplication> getAllApplications() {
+        return applicationRepository.findAllByOrderByAppliedDateDesc();
+    }
+
+    public List<AdmissionApplication> getApplicationsByStatus(ApplicationStatus status) {
+        return applicationRepository.findByStatus(status);
+    }
+
+    public List<AdmissionApplication> getReport(String className, String section) {
+        String filterClass = (className != null && !className.trim().isEmpty() && !"ALL".equalsIgnoreCase(className)) ? className : null;
+        String filterSec = (section != null && !section.trim().isEmpty() && !"ALL".equalsIgnoreCase(section)) ? section : null;
+        return applicationRepository.findApprovedStudentsForReport(filterClass, filterSec);
+    }
+
+    public List<String> getAvailableClasses() {
+        return applicationRepository.findDistinctAssignedClasses();
+    }
+
+    public List<String> getAvailableSections() {
+        return applicationRepository.findDistinctAssignedSections();
+    }
+
+    public long countTotal() {
+        return applicationRepository.count();
+    }
+
+    public long countPending() {
+        return applicationRepository.countByStatus(ApplicationStatus.PENDING);
+    }
+
+    public long countApproved() {
+        return applicationRepository.countByStatus(ApplicationStatus.APPROVED);
+    }
+
+    public long countRejected() {
+        return applicationRepository.countByStatus(ApplicationStatus.REJECTED);
+    }
+}
