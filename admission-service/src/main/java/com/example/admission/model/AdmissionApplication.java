@@ -47,7 +47,7 @@ public class AdmissionApplication {
 
     private Double marksPercentage;
 
-    @Column(name = "academic_year", nullable = false)
+    @Column(name = "academic_year")
     private Integer academicYear;
 
     @Enumerated(EnumType.STRING)
