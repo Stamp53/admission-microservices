@@ -45,4 +45,10 @@ public interface AdmissionApplicationRepository extends JpaRepository<AdmissionA
 
     @Query("SELECT DISTINCT a.assignedSection FROM AdmissionApplication a WHERE a.status = 'APPROVED' AND a.assignedSection IS NOT NULL ORDER BY a.assignedSection")
     List<String> findDistinctAssignedSections();
+
+    @Query("SELECT COUNT(a) FROM AdmissionApplication a WHERE a.status = 'APPROVED' AND a.assignedClass = :assignedClass AND a.assignedSection = :section AND a.academicYear = :academicYear AND (:excludeId IS NULL OR a.id != :excludeId)")
+    long countApprovedInSection(@Param("assignedClass") String assignedClass,
+                                @Param("section") String section,
+                                @Param("academicYear") Integer academicYear,
+                                @Param("excludeId") Long excludeId);
 }

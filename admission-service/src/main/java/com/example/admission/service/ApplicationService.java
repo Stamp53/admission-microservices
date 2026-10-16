@@ -20,12 +20,39 @@ import java.util.Optional;
 @Service
 public class ApplicationService {
 
+    public static final int MAX_SECTION_CAPACITY = 30;
+
     private final AdmissionApplicationRepository applicationRepository;
     private final UserService userService;
 
     public ApplicationService(AdmissionApplicationRepository applicationRepository, UserService userService) {
         this.applicationRepository = applicationRepository;
         this.userService = userService;
+    }
+
+    public String autoAssignAvailableSection(String assignedClass, Integer academicYear, Long excludeId) {
+        for (char c = 'A'; c <= 'Z'; c++) {
+            String sectionName = "Section " + c;
+            long currentCount = applicationRepository.countApprovedInSection(assignedClass, sectionName, academicYear, excludeId);
+            if (currentCount < MAX_SECTION_CAPACITY) {
+                return sectionName;
+            }
+        }
+        throw new IllegalStateException("All sections (A through Z) for " + assignedClass 
+                + " have reached maximum capacity (" + MAX_SECTION_CAPACITY + " students each).");
+    }
+
+    private String resolveAssignedSection(String requestedSection, String assignedClass, Integer academicYear, Long applicationId) {
+        if (requestedSection != null && !requestedSection.trim().isEmpty() && !"AUTO".equalsIgnoreCase(requestedSection.trim())) {
+            String sec = requestedSection.trim();
+            long currentCount = applicationRepository.countApprovedInSection(assignedClass, sec, academicYear, applicationId);
+            if (currentCount >= MAX_SECTION_CAPACITY) {
+                throw new IllegalStateException(sec + " for " + assignedClass 
+                        + " is full (reached maximum capacity of " + MAX_SECTION_CAPACITY + " students). Please choose another section or use auto-assign.");
+            }
+            return sec;
+        }
+        return autoAssignAvailableSection(assignedClass, academicYear, applicationId);
     }
 
     private synchronized String generateNextApplicationNumber() {
@@ -127,9 +154,7 @@ public class ApplicationService {
             String assignedCls = (dto.getAssignedClass() != null && !dto.getAssignedClass().trim().isEmpty()) 
                     ? dto.getAssignedClass().trim() 
                     : dto.getAppliedClass();
-            String assignedSec = (dto.getAssignedSection() != null && !dto.getAssignedSection().trim().isEmpty()) 
-                    ? dto.getAssignedSection().trim() 
-                    : "Section A";
+            String assignedSec = resolveAssignedSection(dto.getAssignedSection(), assignedCls, app.getAcademicYear(), null);
             app.setAssignedClass(assignedCls);
             app.setAssignedSection(assignedSec);
             app.setPermanentRollNumber(generateNextPermanentRollNumber());
@@ -154,9 +179,7 @@ public class ApplicationService {
         String assignedCls = (dto.getAssignedClass() != null && !dto.getAssignedClass().trim().isEmpty()) 
                 ? dto.getAssignedClass().trim() 
                 : app.getAppliedClass();
-        String assignedSec = (dto.getAssignedSection() != null && !dto.getAssignedSection().trim().isEmpty()) 
-                ? dto.getAssignedSection().trim() 
-                : "Section A";
+        String assignedSec = resolveAssignedSection(dto.getAssignedSection(), assignedCls, app.getAcademicYear(), app.getId());
         app.setAssignedClass(assignedCls);
         app.setAssignedSection(assignedSec);
         if (app.getPermanentRollNumber() == null) {

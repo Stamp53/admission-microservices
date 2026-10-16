@@ -132,12 +132,13 @@
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">Assign / Edit Section *</label>
-                            <select th:field="*{assignedSection}" class="form-control" required>
-                                <option value="Section A">Section A</option>
-                                <option value="Section B">Section B</option>
-                                <option value="Section C">Section C</option>
-                                <option value="Section D">Section D</option>
+                            <label class="form-label">Assign / Edit Section</label>
+                            <select th:field="*{assignedSection}" class="form-control">
+                                <option value="AUTO">-- Auto Assign (Max 30 / Section) --</option>
+                                <option value="Section A">Section A (Max 30)</option>
+                                <option value="Section B">Section B (Max 30)</option>
+                                <option value="Section C">Section C (Max 30)</option>
+                                <option value="Section D">Section D (Max 30)</option>
                             </select>
                         </div>
 

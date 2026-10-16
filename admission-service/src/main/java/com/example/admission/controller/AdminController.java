@@ -65,7 +65,7 @@ public class AdminController {
         model.addAttribute("admissionApp", app);
         model.addAttribute("application", app);
         String initialClass = app.getAssignedClass() != null ? app.getAssignedClass() : app.getAppliedClass();
-        String initialSection = app.getAssignedSection() != null ? app.getAssignedSection() : "Section A";
+        String initialSection = app.getAssignedSection() != null ? app.getAssignedSection() : "AUTO";
         String initialRemarks = app.getRemarks() != null ? app.getRemarks() : "";
         model.addAttribute("approvalDto", new ApprovalDto(initialClass, initialSection, initialRemarks));
         model.addAttribute("rejectionDto", new RejectionDto(""));

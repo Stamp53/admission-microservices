@@ -7,7 +7,6 @@ public class ApprovalDto {
     @NotBlank(message = "Assigned class is required")
     private String assignedClass;
 
-    @NotBlank(message = "Assigned section is required")
     private String assignedSection;
 
     private String remarks;
