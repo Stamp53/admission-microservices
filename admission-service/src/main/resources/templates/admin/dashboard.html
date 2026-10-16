@@ -101,6 +101,31 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- Pagination Controls -->
+            <div th:if="${totalPages > 1}" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #e2e8f0; flex-wrap: wrap; gap: 0.75rem;">
+                <div style="font-size: 0.875rem; color: var(--text-muted);">
+                    Showing page <strong th:text="${currentPage + 1}">1</strong> of <strong th:text="${totalPages}">1</strong>
+                    (<span th:text="${totalItems}">0</span> total applications)
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <a th:if="${applicationPage.hasPrevious()}" 
+                       th:href="@{/admin/dashboard(page=${currentPage - 1}, size=${applicationPage.size})}" 
+                       class="btn btn-secondary btn-sm" style="padding: 0.35rem 0.75rem;">&larr; Previous</a>
+                    <span th:unless="${applicationPage.hasPrevious()}" 
+                          class="btn btn-secondary btn-sm" style="opacity: 0.45; pointer-events: none; padding: 0.35rem 0.75rem;">&larr; Previous</span>
+
+                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--dark); padding: 0 0.5rem;">
+                        Page <span th:text="${currentPage + 1}">1</span>
+                    </span>
+
+                    <a th:if="${applicationPage.hasNext()}" 
+                       th:href="@{/admin/dashboard(page=${currentPage + 1}, size=${applicationPage.size})}" 
+                       class="btn btn-secondary btn-sm" style="padding: 0.35rem 0.75rem;">Next &rarr;</a>
+                    <span th:unless="${applicationPage.hasNext()}" 
+                          class="btn btn-secondary btn-sm" style="opacity: 0.45; pointer-events: none; padding: 0.35rem 0.75rem;">Next &rarr;</span>
+                </div>
+            </div>
         </div>
     </main>
 

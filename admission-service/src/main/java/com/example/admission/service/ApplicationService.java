@@ -9,6 +9,9 @@ import com.example.admission.model.ApplicationStatus;
 import com.example.admission.model.Role;
 import com.example.admission.model.User;
 import com.example.admission.repository.AdmissionApplicationRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -245,6 +248,11 @@ public class ApplicationService {
 
     public List<AdmissionApplication> getAllApplications() {
         return applicationRepository.findAllByOrderByAppliedDateDesc();
+    }
+
+    public Page<AdmissionApplication> getApplicationsPaged(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return applicationRepository.findAllByOrderByAppliedDateDesc(pageable);
     }
 
     public List<AdmissionApplication> getApplicationsByStatus(ApplicationStatus status) {

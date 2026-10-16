@@ -3,6 +3,8 @@ package com.example.admission.repository;
 import com.example.admission.model.AdmissionApplication;
 import com.example.admission.model.ApplicationStatus;
 import com.example.admission.model.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -33,6 +35,8 @@ public interface AdmissionApplicationRepository extends JpaRepository<AdmissionA
     List<AdmissionApplication> findByStatus(ApplicationStatus status);
 
     List<AdmissionApplication> findAllByOrderByAppliedDateDesc();
+
+    Page<AdmissionApplication> findAllByOrderByAppliedDateDesc(Pageable pageable);
 
     long countByStatus(ApplicationStatus status);
 

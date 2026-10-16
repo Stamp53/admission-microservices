@@ -8,6 +8,7 @@ import com.example.admission.model.ApplicationStatus;
 import com.example.admission.service.ApplicationService;
 import com.example.admission.service.UserService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -29,12 +30,22 @@ public class AdminController {
     }
 
     @GetMapping("/dashboard")
-    public String dashboard(Model model) {
+    public String dashboard(@RequestParam(value = "page", defaultValue = "0") int page,
+                            @RequestParam(value = "size", defaultValue = "5") int size,
+                            Model model) {
+        if (page < 0) page = 0;
+        if (size <= 0) size = 5;
+        Page<AdmissionApplication> applicationPage = applicationService.getApplicationsPaged(page, size);
+
         model.addAttribute("totalCount", applicationService.countTotal());
         model.addAttribute("pendingCount", applicationService.countPending());
         model.addAttribute("approvedCount", applicationService.countApproved());
         model.addAttribute("rejectedCount", applicationService.countRejected());
-        model.addAttribute("recentApplications", applicationService.getAllApplications().stream().limit(5).toList());
+        model.addAttribute("applicationPage", applicationPage);
+        model.addAttribute("recentApplications", applicationPage.getContent());
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", applicationPage.getTotalPages());
+        model.addAttribute("totalItems", applicationPage.getTotalElements());
         return "admin/dashboard";
     }
 
