@@ -27,19 +27,21 @@ public class StudentController {
 
     @GetMapping("/dashboard")
     public String dashboard(@AuthenticationPrincipal UserDetails userDetails, Model model) {
+        if (userDetails == null) {
+            return "redirect:/login";
+        }
         Optional<User> userOpt = userService.findByUsername(userDetails.getUsername());
-        if (userOpt.isPresent()) {
-            User user = userOpt.get();
-            model.addAttribute("user", user);
-            Optional<AdmissionApplication> appOpt = applicationService.getApplicationForUser(user);
-            model.addAttribute("allApplications", applicationService.getAllApplicationsForUser(user));
-            if (appOpt.isPresent()) {
-                AdmissionApplication app = appOpt.get();
-                model.addAttribute("admissionApp", app);
-                model.addAttribute("hasApplication", true);
-            } else {
-                model.addAttribute("hasApplication", false);
-            }
+        if (userOpt.isEmpty()) {
+            return "redirect:/login?logout=true";
+        }
+        User user = userOpt.get();
+        model.addAttribute("user", user);
+        Optional<AdmissionApplication> appOpt = applicationService.getApplicationForUser(user);
+        model.addAttribute("allApplications", applicationService.getAllApplicationsForUser(user));
+        if (appOpt.isPresent()) {
+            AdmissionApplication app = appOpt.get();
+            model.addAttribute("admissionApp", app);
+            model.addAttribute("hasApplication", true);
         } else {
             model.addAttribute("hasApplication", false);
         }

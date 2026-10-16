@@ -76,19 +76,27 @@ public class AdminController {
     public String approveApplication(@PathVariable Long id,
                                      @ModelAttribute("approvalDto") ApprovalDto approvalDto,
                                      RedirectAttributes redirectAttributes) {
-        AdmissionApplication app = applicationService.approveApplication(id, approvalDto);
-        redirectAttributes.addFlashAttribute("successMessage",
-                "Application " + app.getApplicationNumber() + " approved / updated! Permanent Roll Number: " + app.getPermanentRollNumber());
+        try {
+            AdmissionApplication app = applicationService.approveApplication(id, approvalDto);
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Application " + app.getApplicationNumber() + " approved / updated! Permanent Roll Number: " + app.getPermanentRollNumber());
+        } catch (Exception ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        }
         return "redirect:/admin/applications/" + id;
     }
 
     @PostMapping("/applications/{id}/reject")
     public String rejectApplication(@PathVariable Long id,
-                                    @ModelAttribute("rejectionDto") RejectionDto rejectionDto,
-                                    RedirectAttributes redirectAttributes) {
-        AdmissionApplication app = applicationService.rejectApplication(id, rejectionDto);
-        redirectAttributes.addFlashAttribute("errorMessage",
-                "Application " + app.getApplicationNumber() + " has been rejected.");
+                                     @ModelAttribute("rejectionDto") RejectionDto rejectionDto,
+                                     RedirectAttributes redirectAttributes) {
+        try {
+            AdmissionApplication app = applicationService.rejectApplication(id, rejectionDto);
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "Application " + app.getApplicationNumber() + " has been rejected.");
+        } catch (Exception ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        }
         return "redirect:/admin/applications/" + id;
     }
 
@@ -104,22 +112,34 @@ public class AdminController {
                                              RedirectAttributes redirectAttributes,
                                              Model model) {
         if (dto.isCreateUserAccount() && dto.getUsername() != null && !dto.getUsername().trim().isEmpty()) {
-            if (userService.usernameExists(dto.getUsername())) {
+            if (userService.usernameExists(dto.getUsername().trim())) {
                 bindingResult.rejectValue("username", "error.user", "This username is already taken.");
             }
+        }
+
+        int currentYear = java.time.Year.now().getValue();
+        if (dto.getEmail() != null && dto.getAppliedClass() != null 
+                && applicationService.existsByEmailAndClassAndYear(dto.getEmail().trim(), dto.getAppliedClass(), currentYear)) {
+            bindingResult.rejectValue("email", "error.duplicate", 
+                    "An application for " + dto.getAppliedClass() + " in " + currentYear + " already exists with this email.");
         }
 
         if (bindingResult.hasErrors()) {
             return "admin/register-student";
         }
 
-        AdmissionApplication created = applicationService.adminRegisterStudent(dto);
-        String msg = "Student registration completed! Assigned Application No: " + created.getApplicationNumber();
-        if (created.getPermanentRollNumber() != null) {
-            msg += " | Permanent Roll No: " + created.getPermanentRollNumber();
+        try {
+            AdmissionApplication created = applicationService.adminRegisterStudent(dto);
+            String msg = "Student registration completed! Assigned Application No: " + created.getApplicationNumber();
+            if (created.getPermanentRollNumber() != null) {
+                msg += " | Permanent Roll No: " + created.getPermanentRollNumber();
+            }
+            redirectAttributes.addFlashAttribute("successMessage", msg);
+            return "redirect:/admin/applications/" + created.getId();
+        } catch (IllegalArgumentException ex) {
+            model.addAttribute("errorMessage", ex.getMessage());
+            return "admin/register-student";
         }
-        redirectAttributes.addFlashAttribute("successMessage", msg);
-        return "redirect:/admin/applications/" + created.getId();
     }
 
     @GetMapping("/reports")

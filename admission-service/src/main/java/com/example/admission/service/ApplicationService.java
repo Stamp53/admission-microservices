@@ -88,28 +88,34 @@ public class ApplicationService {
 
     @Transactional
     public AdmissionApplication adminRegisterStudent(AdminStudentRegistrationDto dto) {
+        int currentYear = Year.now().getValue();
+
+        if (applicationRepository.existsByEmailAndAppliedClassAndAcademicYear(dto.getEmail(), dto.getAppliedClass(), currentYear)) {
+            throw new IllegalArgumentException("An application for " + dto.getAppliedClass() + " in academic year " + currentYear + " with email " + dto.getEmail() + " already exists.");
+        }
+
         User user = null;
         if (dto.isCreateUserAccount() && dto.getUsername() != null && !dto.getUsername().trim().isEmpty()) {
             String password = (dto.getPassword() != null && !dto.getPassword().trim().isEmpty()) 
                     ? dto.getPassword() 
                     : "student123";
             user = userService.registerUser(
-                    dto.getUsername(),
+                    dto.getUsername().trim(),
                     password,
-                    dto.getFullName(),
+                    dto.getFullName().trim(),
                     Role.ROLE_STUDENT
             );
         }
 
         AdmissionApplication app = new AdmissionApplication();
         app.setApplicationNumber(generateNextApplicationNumber());
-        app.setAcademicYear(Year.now().getValue());
-        app.setStudentName(dto.getFullName());
-        app.setEmail(dto.getEmail());
-        app.setPhone(dto.getPhone());
+        app.setAcademicYear(currentYear);
+        app.setStudentName(dto.getFullName().trim());
+        app.setEmail(dto.getEmail().trim());
+        app.setPhone(dto.getPhone().trim());
         app.setDateOfBirth(dto.getDateOfBirth());
         app.setGender(dto.getGender());
-        app.setAddress(dto.getAddress());
+        app.setAddress(dto.getAddress().trim());
         app.setAppliedClass(dto.getAppliedClass());
         app.setPreviousSchool(dto.getPreviousSchool());
         app.setMarksPercentage(dto.getMarksPercentage());
@@ -118,10 +124,18 @@ public class ApplicationService {
 
         if ("APPROVED".equalsIgnoreCase(dto.getInitialStatus())) {
             app.setStatus(ApplicationStatus.APPROVED);
-            app.setAssignedClass(dto.getAssignedClass() != null && !dto.getAssignedClass().isEmpty() ? dto.getAssignedClass() : dto.getAppliedClass());
-            app.setAssignedSection(dto.getAssignedSection() != null && !dto.getAssignedSection().isEmpty() ? dto.getAssignedSection() : "A");
+            String assignedCls = (dto.getAssignedClass() != null && !dto.getAssignedClass().trim().isEmpty()) 
+                    ? dto.getAssignedClass().trim() 
+                    : dto.getAppliedClass();
+            String assignedSec = (dto.getAssignedSection() != null && !dto.getAssignedSection().trim().isEmpty()) 
+                    ? dto.getAssignedSection().trim() 
+                    : "Section A";
+            app.setAssignedClass(assignedCls);
+            app.setAssignedSection(assignedSec);
             app.setPermanentRollNumber(generateNextPermanentRollNumber());
-            app.setRemarks(dto.getRemarks() != null ? dto.getRemarks() : "Directly enrolled by Administrator.");
+            app.setRemarks(dto.getRemarks() != null && !dto.getRemarks().trim().isEmpty() 
+                    ? dto.getRemarks().trim() 
+                    : "Directly enrolled by Administrator.");
             app.setDecisionDate(LocalDateTime.now());
         } else {
             app.setStatus(ApplicationStatus.PENDING);
@@ -137,12 +151,20 @@ public class ApplicationService {
                 .orElseThrow(() -> new IllegalArgumentException("Application not found with ID: " + id));
 
         app.setStatus(ApplicationStatus.APPROVED);
-        app.setAssignedClass(dto.getAssignedClass());
-        app.setAssignedSection(dto.getAssignedSection());
+        String assignedCls = (dto.getAssignedClass() != null && !dto.getAssignedClass().trim().isEmpty()) 
+                ? dto.getAssignedClass().trim() 
+                : app.getAppliedClass();
+        String assignedSec = (dto.getAssignedSection() != null && !dto.getAssignedSection().trim().isEmpty()) 
+                ? dto.getAssignedSection().trim() 
+                : "Section A";
+        app.setAssignedClass(assignedCls);
+        app.setAssignedSection(assignedSec);
         if (app.getPermanentRollNumber() == null) {
             app.setPermanentRollNumber(generateNextPermanentRollNumber());
         }
-        app.setRemarks(dto.getRemarks());
+        if (dto.getRemarks() != null && !dto.getRemarks().trim().isEmpty()) {
+            app.setRemarks(dto.getRemarks().trim());
+        }
         app.setDecisionDate(LocalDateTime.now());
 
         return applicationRepository.save(app);
@@ -160,21 +182,19 @@ public class ApplicationService {
         return applicationRepository.save(app);
     }
 
+    public boolean existsByEmailAndClassAndYear(String email, String appliedClass, int academicYear) {
+        return applicationRepository.existsByEmailAndAppliedClassAndAcademicYear(email, appliedClass, academicYear);
+    }
+
     public Optional<AdmissionApplication> getApplicationForUser(User user) {
         if (user == null) {
             return Optional.empty();
         }
         if (user.getId() != null) {
-            Optional<AdmissionApplication> byId = applicationRepository.findByUserId(user.getId());
-            if (byId.isPresent()) {
-                return byId;
-            }
+            return applicationRepository.findFirstByUserIdOrderByAppliedDateDesc(user.getId());
         }
         if (user.getUsername() != null) {
-            Optional<AdmissionApplication> byName = applicationRepository.findByUserUsername(user.getUsername());
-            if (byName.isPresent()) {
-                return byName;
-            }
+            return applicationRepository.findFirstByUserUsernameOrderByAppliedDateDesc(user.getUsername());
         }
         return Optional.empty();
     }

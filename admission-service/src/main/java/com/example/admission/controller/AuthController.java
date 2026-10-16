@@ -59,21 +59,31 @@ public class AuthController {
                                      BindingResult bindingResult,
                                      RedirectAttributes redirectAttributes,
                                      Model model) {
-        if (userService.usernameExists(dto.getUsername())) {
+        if (dto.getUsername() != null && userService.usernameExists(dto.getUsername().trim())) {
             bindingResult.rejectValue("username", "error.user", "This username is already in use.");
+        }
+
+        int currentYear = java.time.Year.now().getValue();
+        if (dto.getEmail() != null && dto.getAppliedClass() != null 
+                && applicationService.existsByEmailAndClassAndYear(dto.getEmail().trim(), dto.getAppliedClass(), currentYear)) {
+            bindingResult.rejectValue("email", "error.duplicate", 
+                    "An application for " + dto.getAppliedClass() + " in " + currentYear + " already exists with this email.");
         }
 
         if (bindingResult.hasErrors()) {
             return "register";
         }
 
-        AdmissionApplication createdApp = applicationService.registerStudentApplication(dto);
-
-        redirectAttributes.addFlashAttribute("successMessage",
-                "Registration successful! Your Application Number is: " + createdApp.getApplicationNumber()
-                + ". Please login to check your admission status.");
-
-        return "redirect:/login";
+        try {
+            AdmissionApplication createdApp = applicationService.registerStudentApplication(dto);
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Registration successful! Your Application Number is: " + createdApp.getApplicationNumber()
+                    + ". Please login to check your admission status.");
+            return "redirect:/login";
+        } catch (IllegalArgumentException ex) {
+            model.addAttribute("errorMessage", ex.getMessage());
+            return "register";
+        }
     }
 
     @GetMapping("/track")

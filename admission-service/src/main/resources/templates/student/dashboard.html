@@ -11,7 +11,7 @@
     <header class="navbar">
         <a th:href="@{/student/dashboard}" class="nav-brand">🎓 Student Portal</a>
         <div class="nav-links">
-            <span class="user-badge" th:text="'Student: ' + ${user.fullName}">Student: John</span>
+            <span class="user-badge" th:text="'Student: ' + ${user != null ? user.fullName : 'Portal'}">Student: User</span>
             <!-- Safe Logout Form (POST with CSRF) -->
             <form th:action="@{/logout}" method="post" style="display: inline;">
                 <button type="submit" class="btn-logout">Safe Logout</button>
@@ -159,6 +159,47 @@
                         <div class="stat-title">Residential Address</div>
                         <div style="font-weight: 600;" th:text="${admissionApp.address}"></div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Application History (Multi-Year Support) -->
+            <div th:if="${allApplications != null and #lists.size(allApplications) > 1}" class="card">
+                <h3 class="card-title">All Applications History</h3>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Year</th>
+                                <th>Application No.</th>
+                                <th>Applied Class</th>
+                                <th>Assigned Section</th>
+                                <th>Perm. Roll No.</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="histApp : ${allApplications}">
+                                <td><strong th:text="${histApp.academicYear != null ? histApp.academicYear : '2026'}"></strong></td>
+                                <td><span style="font-family: monospace; font-weight: 700; color: var(--primary);" th:text="${histApp.applicationNumber}"></span></td>
+                                <td th:text="${histApp.appliedClass}"></td>
+                                <td>
+                                    <span th:if="${histApp.assignedClass != null}" th:text="${histApp.assignedClass + (histApp.assignedSection != null ? ' - ' + histApp.assignedSection : '')}"></span>
+                                    <span th:if="${histApp.assignedClass == null}" style="color: var(--text-muted);">-</span>
+                                </td>
+                                <td>
+                                    <span th:if="${histApp.permanentRollNumber != null}" style="font-family: monospace; font-weight: 700; color: #047857;" th:text="${histApp.permanentRollNumber}"></span>
+                                    <span th:if="${histApp.permanentRollNumber == null}" style="color: var(--text-muted);">-</span>
+                                </td>
+                                <td>
+                                    <span th:if="${histApp.pending}" class="badge badge-pending">PENDING</span>
+                                    <span th:if="${histApp.approved}" class="badge badge-approved">APPROVED</span>
+                                    <span th:if="${histApp.rejected}" class="badge badge-rejected">REJECTED</span>
+                                </td>
+                                <td><span th:text="${#temporals.format(histApp.appliedDate, 'dd-MMM-yyyy')}"></span></td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

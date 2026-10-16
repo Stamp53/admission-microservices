@@ -23,6 +23,7 @@
         </div>
 
         <div class="card">
+            <div th:if="${errorMessage}" class="alert alert-danger" style="background-color: #fee2e2; border: 1px solid #f87171; color: #b91c1c; padding: 0.85rem 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-weight: 500;" th:text="${errorMessage}"></div>
             <form th:action="@{/register}" th:object="${registrationDto}" method="post">
                 
                 <h3 style="font-size: 1.1rem; color: var(--primary); margin-bottom: 1.25rem; border-bottom: 2px solid var(--primary-light); padding-bottom: 0.5rem;">

@@ -14,9 +14,11 @@ public class AdminStudentRegistrationDto {
     private String email;
 
     @NotBlank(message = "Phone number is required")
+    @Pattern(regexp = "^[0-9]{10}$", message = "Phone number must be a valid 10-digit mobile number")
     private String phone;
 
     @NotNull(message = "Date of birth is required")
+    @Past(message = "Date of birth must be a past date")
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate dateOfBirth;
 

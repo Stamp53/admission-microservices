@@ -76,7 +76,7 @@
                             </td>
                             <td th:text="${app.appliedClass}"></td>
                             <td>
-                                <span th:if="${app.assignedClass != null}" th:text="${app.assignedClass + ' (' + app.assignedSection + ')'}"></span>
+                                <span th:if="${app.assignedClass != null}" th:text="${app.assignedClass + (app.assignedSection != null and !app.assignedSection.isEmpty() ? ' (' + app.assignedSection + ')' : '')}"></span>
                                 <span th:if="${app.assignedClass == null}" style="color: var(--text-muted);">-</span>
                             </td>
                             <td>

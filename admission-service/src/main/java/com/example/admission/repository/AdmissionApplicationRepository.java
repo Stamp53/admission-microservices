@@ -14,23 +14,13 @@ import java.util.Optional;
 @Repository
 public interface AdmissionApplicationRepository extends JpaRepository<AdmissionApplication, Long> {
 
-    Optional<AdmissionApplication> findByUser(User user);
+    Optional<AdmissionApplication> findFirstByUserIdOrderByAppliedDateDesc(Long userId);
 
-    @Query("SELECT a FROM AdmissionApplication a WHERE a.user.id = :userId ORDER BY a.appliedDate DESC")
-    List<AdmissionApplication> findByUserIdOrderByAppliedDateDesc(@Param("userId") Long userId);
+    Optional<AdmissionApplication> findFirstByUserUsernameOrderByAppliedDateDesc(String username);
 
-    @Query("SELECT a FROM AdmissionApplication a WHERE a.user.username = :username ORDER BY a.appliedDate DESC")
-    List<AdmissionApplication> findByUserUsernameOrderByAppliedDateDesc(@Param("username") String username);
+    List<AdmissionApplication> findByUserIdOrderByAppliedDateDesc(Long userId);
 
-    default Optional<AdmissionApplication> findByUserId(Long userId) {
-        List<AdmissionApplication> list = findByUserIdOrderByAppliedDateDesc(userId);
-        return list.isEmpty() ? Optional.empty() : Optional.of(list.get(0));
-    }
-
-    default Optional<AdmissionApplication> findByUserUsername(String username) {
-        List<AdmissionApplication> list = findByUserUsernameOrderByAppliedDateDesc(username);
-        return list.isEmpty() ? Optional.empty() : Optional.of(list.get(0));
-    }
+    List<AdmissionApplication> findByUserUsernameOrderByAppliedDateDesc(String username);
 
     boolean existsByUserIdAndAcademicYear(Long userId, Integer academicYear);
 
@@ -55,7 +45,4 @@ public interface AdmissionApplicationRepository extends JpaRepository<AdmissionA
 
     @Query("SELECT DISTINCT a.assignedSection FROM AdmissionApplication a WHERE a.status = 'APPROVED' AND a.assignedSection IS NOT NULL ORDER BY a.assignedSection")
     List<String> findDistinctAssignedSections();
-
-    @Query("SELECT MAX(a.id) FROM AdmissionApplication a")
-    Long findMaxId();
 }
